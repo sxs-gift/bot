@@ -10,7 +10,7 @@ TOKEN = "8772612144:AAEU_wDtpmN_rWWKasQUyPCt9tzqORHfPZM"  # Вставь сюд�
 OWNER_ID = 8167702565  # Вставь свой Telegram ID
 
 # Ссылка на фото (если не нужна, оставь пустой)
-PHOTO_URL = "https://iimg.su/i/upO03j"  # Например: "https://telegra.ph/file/example.jpg"
+PHOTO_URL = ""  # Например: "https://telegra.ph/file/example.jpg"
 # ====================
 
 # Состояния
