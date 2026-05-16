@@ -48,7 +48,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     if PHOTO_URL:
-        await update.message.reply_photo(photo=PHOTO_URL, caption="Главное меню", reply_markup=reply_markup)
+        await update.message.reply_photo(photo="https://iimg.su/i/upO03j", caption="Главное меню", reply_markup=reply_markup)
     else:
         await update.message.reply_text("Главное меню", reply_markup=reply_markup)
 
