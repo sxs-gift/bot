@@ -5,22 +5,26 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Mess
 # ===== НАСТРОЙКИ =====
 TOKEN = "8772612144:AAEU_wDtpmN_rWWKasQUyPCt9tzqORHfPZM"
 OWNER_ID = 8167702565  # Твой Telegram ID
-
-# ССЫЛКА НА ФОТО (вставь свою)
-PHOTO_URL = "https://sun9-8.userapi.com/s/v1/ig2/xtyNX_gKELsgnfnMtDAZRj-YlCPMpLJNi0-eqQLsSiqzWE3vUaxxtJybqE-IBP6H1zyhi0rDVIVsHm4g1U7isEwZ.jpg?quality=95&as=32x43,48x64,72x97,108x145,160x215,240x322,360x483,480x644,540x724,640x859,720x966&from=bu&u=UWLFsG4V6-xXWAPMY6I6CkDCfiiT5PApxThv-X481r4&cs=720x0"  # 🔁 ЗАМЕНИ НА СВОЮ ССЫЛКУ
 # ====================
 
 # Состояния для заявки на министра
-WAITING_NICKNAME, WAITING_POSITION, WAITING_ONLINE, WAITING_CHANGES, WAITING_PREVIOUS_EXPERIENCE = range(5)
+(
+    WAITING_NICKNAME,
+    WAITING_POSITION,
+    WAITING_ONLINE,
+    WAITING_CHANGES,
+    WAITING_PREVIOUS_EXPERIENCE
+) = range(5)
 
 # Хранилище заявок: {номер: данные}
 applications = {}
 next_app_id = 1
 
 # Для ожидания ввода времени встречи от владельца
-owner_waiting_meeting_time = {}
+owner_waiting_meeting_time = {}  # {user_id: app_num}
 
 # ===== СПИСОК МИНИСТРОВ (ЗАДАЁШЬ ЗДЕСЬ) =====
+# Заполни ники министров вручную
 ministers = {
     "Министр экономики": "",
     "Министр спавна": "",
@@ -40,25 +44,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("ℹ️ Информация", callback_data="info")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await update.message.reply_photo(
-        photo=PHOTO_URL,
-        caption="«Главное меню»",
-        reply_markup=reply_markup
-    )
+    await update.message.reply_text("«Главное меню»", reply_markup=reply_markup)
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
+    user_id = query.from_user.id
+
     if query.data == "offer":
         context.user_data["state"] = "waiting_offer"
         await query.edit_message_text("Отправьте свой ник и идею:")
+
     elif query.data == "minister":
         context.user_data["state"] = WAITING_NICKNAME
         context.user_data["minister_data"] = {}
         await query.edit_message_text("«ШАГ 1/5»\nВведите ваш ник:")
+
     elif query.data == "info":
+        # Формируем список министров
         ministers_list = ""
         for position, name in ministers.items():
             if name:
@@ -79,7 +82,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     text = update.message.text
     state = context.user_data.get("state")
-    
+
     # Обработка ввода времени встречи от владельца
     if user_id == OWNER_ID and user_id in owner_waiting_meeting_time:
         app_num = owner_waiting_meeting_time.pop(user_id)
@@ -94,7 +97,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await update.message.reply_text(f"❌ Заявка #{app_num} не найдена.")
         return
-    
+
     # Обработка простого предложения
     if state == "waiting_offer":
         user_name = update.message.from_user.full_name
@@ -105,25 +108,26 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await update.message.reply_text("✅ Спасибо! Ваше предложение отправлено владельцу.")
         del context.user_data["state"]
-    
+
     # Анкета министра
     elif state == WAITING_NICKNAME:
         context.user_data["minister_data"]["nickname"] = text
         context.user_data["state"] = WAITING_POSITION
+        
         keyboard = [[InlineKeyboardButton(pos, callback_data=f"pos_{pos}")] for pos in POSITIONS]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text("«ШАГ 2/5»\nВыберите должность:", reply_markup=reply_markup)
-    
+
     elif state == WAITING_ONLINE:
         context.user_data["minister_data"]["online"] = text
         context.user_data["state"] = WAITING_CHANGES
         await update.message.reply_text("«ШАГ 4/5»\nЧто бы вы изменили, будь вы на этой должности?")
-    
+
     elif state == WAITING_CHANGES:
         context.user_data["minister_data"]["changes"] = text
         context.user_data["state"] = WAITING_PREVIOUS_EXPERIENCE
         await update.message.reply_text("«ШАГ 5/5»\nСтояли ли вы на подобной должности ранее? (Да/Нет, можно с подробностями)")
-    
+
     elif state == WAITING_PREVIOUS_EXPERIENCE:
         context.user_data["minister_data"]["previous_experience"] = text
         await finish_minister_application(update, context)
@@ -144,10 +148,10 @@ async def finish_minister_application(update: Update, context: ContextTypes.DEFA
     data = context.user_data["minister_data"]
     user_name = update.message.from_user.full_name
     username = update.message.from_user.username or "нет username"
-    
+
     app_num = next_app_id
     next_app_id += 1
-    
+
     full_text = (
         f"Ник: {data['nickname']}\n"
         f"Должность: {data['position']}\n"
@@ -155,7 +159,7 @@ async def finish_minister_application(update: Update, context: ContextTypes.DEFA
         f"Что изменит: {data['changes']}\n"
         f"Опыт: {data['previous_experience']}"
     )
-    
+
     applications[app_num] = {
         "user_id": user_id,
         "text": full_text,
@@ -164,16 +168,16 @@ async def finish_minister_application(update: Update, context: ContextTypes.DEFA
         "username": username,
         "raw_data": data.copy()
     }
-    
+
     await context.bot.send_message(
         chat_id=OWNER_ID,
         text=f"«НОВАЯ ЗАЯВКА НА МИНИСТРА» #{app_num}\nОт: {user_name} (@{username})\n\n{full_text}\n\nДля решения используй:\n/apply {app_num}"
     )
-    
+
     await update.message.reply_text(
         f"✅ Анкета отправлена!\nВаша заявка #{app_num}\nОжидайте решения владельца."
     )
-    
+
     del context.user_data["state"]
     del context.user_data["minister_data"]
 
@@ -181,21 +185,21 @@ async def apply_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id != OWNER_ID:
         await update.message.reply_text("❌ Только владелец.")
         return
-    
+
     if len(context.args) != 1:
         await update.message.reply_text("ℹ️ Использование: /apply <номер_заявки>")
         return
-    
+
     try:
         app_num = int(context.args[0])
     except ValueError:
         await update.message.reply_text("❌ Номер должен быть числом.")
         return
-    
+
     if app_num not in applications:
         await update.message.reply_text(f"❌ Заявка #{app_num} не найдена.")
         return
-    
+
     app_data = applications[app_num]
     
     keyboard = [
@@ -221,17 +225,17 @@ async def decision_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.from_user.id != OWNER_ID:
         await query.edit_message_text("❌ Вы не владелец.")
         return
-    
+
     action, app_num_str = query.data.split('_')
     app_num = int(app_num_str)
-    
+
     if app_num not in applications:
         await query.edit_message_text(f"❌ Заявка #{app_num} уже обработана.")
         return
-    
+
     app_data = applications[app_num]
     user_to_notify = app_data["user_id"]
-    
+
     if action == "accept":
         await context.bot.send_message(
             chat_id=user_to_notify,
@@ -239,7 +243,7 @@ async def decision_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await query.edit_message_text(f"✅ Заявка #{app_num} ПРИНЯТА. Пользователь уведомлён.")
         del applications[app_num]
-    
+
     elif action == "reject":
         await context.bot.send_message(
             chat_id=user_to_notify,
@@ -247,13 +251,13 @@ async def decision_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await query.edit_message_text(f"❌ Заявка #{app_num} ОТКЛОНЕНА. Пользователь уведомлён.")
         del applications[app_num]
-    
+
     elif action == "meeting":
         owner_waiting_meeting_time[OWNER_ID] = app_num
         await query.edit_message_text(
             f"«Назначение встречи»\nВведите время встречи для заявки #{app_num}\n\nПример: завтра в 19:00 МСК или сегодня в 21:00 на сервере"
         )
-    
+
     elif action == "contact":
         await context.bot.send_message(
             chat_id=user_to_notify,
@@ -278,7 +282,7 @@ async def cancel_state(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     app = Application.builder().token(TOKEN).build()
-    
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("cancel", cancel_state))
     app.add_handler(CommandHandler("apply", apply_command))
@@ -287,7 +291,7 @@ def main():
     app.add_handler(CallbackQueryHandler(position_callback, pattern="^pos_"))
     app.add_handler(CallbackQueryHandler(decision_handler, pattern="^(accept|reject|meeting|contact)_"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
-    
+
     print("✅ Бот запущен...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
