@@ -48,7 +48,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     if PHOTO_URL:
-        await update.message.reply_photo(photo=https://sun9-8.userapi.com/s/v1/ig2/xtyNX_gKELsgnfnMtDAZRj-YlCPMpLJNi0-eqQLsSiqzWE3vUaxxtJybqE-IBP6H1zyhi0rDVIVsHm4g1U7isEwZ.jpg?quality=95&as=32x43,48x64,72x97,108x145,160x215,240x322,360x483,480x644,540x724,640x859,720x966&from=bu&u=UWLFsG4V6-xXWAPMY6I6CkDCfiiT5PApxThv-X481r4&cs=720x0, caption="Главное меню", reply_markup=reply_markup)
+        await update.message.reply_photo(photo=PHOTO_URL, caption="Главное меню", reply_markup=reply_markup)
     else:
         await update.message.reply_text("Главное меню", reply_markup=reply_markup)
 
